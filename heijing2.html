@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑镜社交实验 - 思辨竞技场</title>
+    <style>
+        :root {
+            --bg-color: #0c0820;
+            --card-bg: rgba(20, 12, 38, 0.7);
+            --card-border: 1px solid rgba(150, 110, 230, 0.25);
+            --accent-pro: #c084fc;
+            --accent-con: #ffb347;
+            --text-main: #f0eefc;
+            --text-dim: #b9acdf;
+            --gap: 20px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            box-sizing: border-box;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .dynamic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 30%, #2a1c4a, #0a0620);
+            z-index: -2;
+        }
+
+        .noise::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-radial-gradient(circle at 20% 30%, rgba(255,255,255,0.02) 0px, rgba(0,0,0,0.02) 2px);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* 便当盒网格容器 */
+        .bento-grid {
+            display: grid;
+            width: 100%;
+            max-width: 1400px;
+            /* 设定为 4 列等分，方便 2:2 或 3:1 组合 */
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--gap);
+        }
+
+        /* 通用卡片容器样式 */
+        .bento-item {
+            background: var(--card-bg);
+            border: var(--card-border);
+            border-radius: 24px;
+            padding: 30px;
+            backdrop-filter: blur(8px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.4);
+        }
+
+        .bento-item:hover {
+            transform: translateY(-8px) scale(1.01);
+            border-color: #ad82f0;
+            background: rgba(32, 20, 58, 0.85);
+            box-shadow: 0 20px 35px -8px rgba(120, 70, 210, 0.4);
+        }
+
+        /* --- 头部区块 (占满全行) --- */
+        .header-item {
+            grid-column: span 4;
+            text-align: left;
+            background: none;
+            border: none;
+            padding: 0 0 20px 0;
+        }
+
+        .header-item h1 {
+            font-size: 2.8rem;
+            margin: 0;
+            letter-spacing: 4px;
+            background: linear-gradient(90deg, var(--accent-pro), var(--accent-con));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* --- 核心辩题卡片 (占 3/4 宽度) --- */
+        .debate-main {
+            grid-column: span 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* --- 统计卡片 (占 1/4 宽度) --- */
+        .stats-sidebar {
+            grid-column: span 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: var(--gap);
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .stat-sub-card {
+            background: rgba(20, 12, 38, 0.7);
+            border: 1px solid rgba(150, 110, 230, 0.25);
+            border-radius: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+
+        .stat-sub-card:hover {
+            transform: translateY(-8px) scale(1.01);
+            border-color: #ad82f0;
+            background: rgba(32, 20, 58, 0.85);
+            box-shadow: 0 20px 35px -8px rgba(120, 70, 210, 0.4);
+        }
+
+        /* --- 深度论点 (左右各占 2/4) --- */
+        .essay-card { grid-column: span 2; }
+        
+        /* --- 输入区 占满一行 --- */
+        .input-block { grid-column: span 4; }
+        .pro-side { border-right: 6px solid var(--accent-pro); }
+        .con-side { border-left: 6px solid var(--accent-con); }
+
+        /* --- 观点流 (占 2/4) --- */
+        .comment-block { 
+            grid-column: span 2; 
+            display: flex;
+            flex-direction: column;
+            /* 设置固定高度，基于你目前的视觉基准（大约 450px-500px） */
+            height: 480px; 
+        }
+
+        /* 新增：评论滚动容器 */
+        .comment-list-container {
+            flex: 1; /* 自动填充剩余空间 */
+            overflow-y: auto; /* 开启纵向滚动 */
+            padding-right: 10px; /* 为滚动条留出空间 */
+        }
+
+        /* 自定义滚动条样式，使其符合黑镜风格 */
+        .comment-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .comment-list-container::-webkit-scrollbar-track {
+            background: rgba(28, 20, 52, 0.3);
+            border-radius: 10px;
+        }
+        .comment-list-container::-webkit-scrollbar-thumb {
+            background: var(--accent-pro);
+            border-radius: 10px;
+            box-shadow: 0 0 5px var(--accent-pro);
+        }
+
+        /* --- 历史档案 (最后一行，占满) --- */
+        .history-block { grid-column: span 4; }
+
+        .history-block > div > div:hover {
+            transform: translateY(-8px) scale(1.01);
+            border-color: #ad82f0;
+            background: rgba(45, 30, 75, 0.8);
+            box-shadow: 0 20px 35px -8px rgba(120, 70, 210, 0.4);
+            cursor: pointer;
+        }
+
+        /* ------------------ UI 细节组件 ------------------ */
+        .topic-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border: 1px solid var(--accent-pro);
+            color: var(--accent-pro);
+            font-size: 13px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .topic-title { font-size: 2.2rem; line-height: 1.3; margin-bottom: 30px; font-weight: bold; }
+
+        .progress-wrapper { height: 16px; background: #1c1638; border-radius: 8px; display: flex; overflow: hidden; margin: 20px 0; }
+        .progress-pro { width: 65%; background: linear-gradient(90deg, #a855f7, var(--accent-pro)); }
+        .progress-con { width: 35%; background: linear-gradient(90deg, var(--accent-con), #ff8c42); }
+
+        .vote-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .btn { padding: 18px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: 0.3s; border: none; font-size: 1rem; }
+        .btn-pro { background: rgba(192, 132, 252, 0.1); color: var(--accent-pro); border: 1px solid var(--accent-pro); }
+        .btn-pro:hover { background: var(--accent-pro); color: #000; box-shadow: 0 0 25px rgba(192, 132, 252, 0.3); }
+        .btn-con { background: rgba(255, 179, 71, 0.1); color: var(--accent-con); border: 1px solid var(--accent-con); }
+        .btn-con:hover { background: var(--accent-con); color: #000; box-shadow: 0 0 25px rgba(255, 179, 71, 0.3); }
+
+        .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--accent-pro); margin-bottom: 5px; }
+        .stat-label { font-size: 0.9rem; color: var(--text-dim); }
+
+        textarea { width: 100%; height: 120px; background: rgba(28, 20, 52, 0.7); border: 1px solid #6b4e9e; border-radius: 12px; color: #f0eefc; padding: 15px; box-sizing: border-box; resize: none; margin: 15px 0; font-family: inherit; backdrop-filter: blur(4px); }
+        .submit-btn { width: 100%; padding: 15px; background: linear-gradient(125deg, #1f173f, #160f2e); color: #f0eefc; border-radius: 12px; font-weight: bold; cursor: pointer; border: 1px solid #6b4e9e; backdrop-filter: blur(4px); transition: 0.3s; }
+        .submit-btn:hover { background: linear-gradient(125deg, #2a1c4a, #1a1336); border-color: #ad82f0; box-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+
+        .comment-item { background: rgba(28, 20, 52, 0.7); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #4c3b70; backdrop-filter: blur(4px); transition: transform 0.2s; }
+        .comment-item:hover { transform: translateX(6px); background: rgba(45, 30, 75, 0.8); }
+        .comment-item.pro { border-left-color: var(--accent-pro); }
+        .comment-item.con { border-left-color: var(--accent-con); }
+
+        .pulse { width: 10px; height: 10px; background: var(--accent-pro); border-radius: 50%; box-shadow: 0 0 10px var(--accent-pro); animation: pulse-animation 1.5s infinite; margin-right: 10px; }
+        @keyframes pulse-animation { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.5; } }
+
+        @media (max-width: 1024px) { .bento-grid { grid-template-columns: 1fr; } .bento-item, .header-item, .debate-main, .stats-sidebar, .essay-card, .input-block, .comment-block, .history-block { grid-column: span 1; } }
+    </style>
+</head>
+<body>
+
+<div class="bento-grid">
+    
+    <header class="header-item">
+        <h1>思辨竞技场</h1>
+        <p style="color: var(--text-dim); margin-top: 10px; font-size: 1.1rem;">「 黑镜社交实验・寻找伦理的赛博共识 」</p>
+    </header>
+
+    <section class="bento-item debate-main">
+        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <div class="pulse"></div>
+            <span style="color: #00ff88; font-size: 14px;">2,405 位观察者正在切磋观点</span>
+        </div>
+        <div class="topic-badge"># 超前现实伦理困境</div>
+        <div class="topic-title">如果自动驾驶系统在事故不可避免时，应优先保护车内乘客，还是行人？</div>
+        
+        <div class="stats-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="color: var(--accent-pro); font-weight: bold;">契约至上 (65%)</span>
+            <span style="color: var(--accent-con); font-weight: bold;">生命平权 (35%)</span>
+        </div>
+        <div class="progress-wrapper">
+            <div class="progress-pro"></div>
+            <div class="progress-con"></div>
+        </div>
+
+        <div class="vote-actions">
+            <button class="btn btn-pro">支持乘客优先</button>
+            <button class="btn btn-con">支持行人优先</button>
+        </div>
+    </section>
+
+    <div class="stats-sidebar">
+        <div class="stat-sub-card">
+            <div class="stat-value">4.2w</div>
+            <div class="stat-label">总参与人次</div>
+        </div>
+        <div class="stat-sub-card">
+            <div class="stat-value">158</div>
+            <div class="stat-label">深度观点输出</div>
+        </div>
+        <div class="stat-sub-card">
+            <div class="stat-value">24h</div>
+            <div class="stat-label">辩论持续时长</div>
+        </div>
+    </div>
+
+    <section class="bento-item input-block">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+            <span style="font-weight: bold; font-size: 1.1rem;">发表你的独立见解</span>
+            <div style="display:flex; gap:10px;">
+                <input type="radio" id="side-pro" name="side" value="pro" checked style="display:none;">
+                <label for="side-pro" style="padding: 6px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #444; transition: 0.3s;" id="label-pro">加入正方</label>
+                
+                <input type="radio" id="side-con" name="side" value="con" style="display:none;">
+                <label for="side-con" style="padding: 6px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #444; transition: 0.3s;" id="label-con">加入反方</label>
+            </div>
+        </div>
+        <textarea id="opinion-input" placeholder="在这个思辨场，没有标准答案，只有深度的碰撞..."></textarea>
+        <button class="submit-btn" onclick="submitOpinion()">同步至竞技场</button>
+    </section>
+
+    <section class="bento-item essay-card pro-side">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-pro);">⚡ 深度逻辑拆解</div>
+            <div class="badge" style="background: rgba(192, 132, 252, 0.1); color: var(--accent-pro); padding: 4px 10px; border-radius: 4px; font-size: 12px;">深度分析</div>
+        </div>
+        <h4 style="font-size: 1.4rem; margin: 20px 0 15px 0;">效率才是最大的伦理</h4>
+        <p style="color: var(--text-dim); line-height: 1.8; font-size: 1rem;">从纯粹的工程逻辑来看，自动驾驶的初衷是降低人为事故率。如果算法在关键时刻不保护车主，那么消费级市场将彻底萎缩，最终导致每年因人为失误多死数十万人...</p>
+        <div style="margin-top: 25px; font-size: 13px; color: var(--text-dim); display: flex; gap: 20px;">
+            <span>💬 128 讨论</span>
+            <span>👍 1.2k 认可</span>
+        </div>
+    </section>
+
+    <section class="bento-item comment-block">
+        <h3 style="font-size: 1.1rem; margin-top: 0; margin-bottom: 20px; color: var(--text-dim);">最新深度交锋</h3>
+        
+        <div class="comment-list-container" id="comment-list">
+            <div class="comment-item pro">
+                <div style="display:flex; justify-content:space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
+                    <span>@赛博哲学家 · 刚才</span>
+                    <span style="background: #ffaa00; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold;">HOT 精选观点</span>
+                </div>
+                <div>消费者购买的是保护自己的工具，如果系统不优先保护乘客，自动驾驶技术将永远无法普及。</div>
+            </div>
+            <div class="comment-item con">
+                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">@元宇宙漫游者 · 3分钟前</div>
+                <div>算法不应被赋予剥夺无辜行人生命的权力，这会导致道德滑坡。</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bento-item history-block">
+        <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 25px;">📂 往期社交实验档案</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="background: rgba(28, 20, 52, 0.7); padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(4px); border: 1px solid rgba(150, 110, 230, 0.25); transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1); box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.4);">
+                <span style="font-size: 0.95rem;">实验 #003：赛博遗嘱，意识上传后是否享有继承权？</span>
+                <span style="color: var(--accent-pro); font-family: monospace; font-weight: bold;">判定：否 (52%)</span>
+            </div>
+            <div style="background: rgba(28, 20, 52, 0.7); padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(4px); border: 1px solid rgba(150, 110, 230, 0.25); transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1); box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.4);">
+                <span style="font-size: 0.95rem;">实验 #002：基因编辑婴儿的社会准入标准</span>
+                <span style="color: var(--accent-pro); font-family: monospace; font-weight: bold;">判定：争议中</span>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // 简单的单选框样式切换逻辑
+    const proLabel = document.getElementById('label-pro');
+    const conLabel = document.getElementById('label-con');
+    document.getElementsByName('side').forEach(radio => {
+        radio.addEventListener('change', () => {
+            if(radio.value === 'pro') {
+                proLabel.style.background = 'var(--accent-pro)';
+                proLabel.style.color = '#000';
+                conLabel.style.background = 'none';
+                conLabel.style.color = '#888';
+            } else {
+                conLabel.style.background = 'var(--accent-con)';
+                conLabel.style.color = '#000';
+                proLabel.style.background = 'none';
+                proLabel.style.color = '#888';
+            }
+        });
+    });
+    // 初始化样式
+    proLabel.style.background = 'var(--accent-pro)';
+    proLabel.style.color = '#000';
+
+    function submitOpinion() {
+            const text = document.getElementById('opinion-input').value;
+            const side = document.querySelector('input[name="side"]:checked').value;
+            // 这里对应上面 HTML 里的 id
+            const listContainer = document.getElementById('comment-list'); 
+
+            if(!text.trim()) { 
+                alert("请先输入您的观点"); 
+                return; 
+            }
+
+            const newComment = document.createElement('div');
+            newComment.className = `comment-item ${side}`;
+            newComment.innerHTML = `
+                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">@你 · 刚刚</div>
+                <div>${text}</div>
+            `;
+            
+            // 1. 插入到滚动容器的最上方
+            listContainer.prepend(newComment);
+            
+            // 2. 自动平滑滚动到顶部，让用户看到自己的留言
+            listContainer.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // 3. 清空输入框
+            document.getElementById('opinion-input').value = '';
+        }
+    </script>
+
+</body>
+</html>
